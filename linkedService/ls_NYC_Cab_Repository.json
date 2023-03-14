@@ -1,0 +1,13 @@
+{
+	"name": "ls_NYC_Cab_Repository",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "HttpServer",
+		"typeProperties": {
+			"url": "https://s3.amazonaws.com/nyc-tlc/",
+			"enableServerCertificateValidation": true,
+			"authenticationType": "Anonymous"
+		}
+	}
+}
