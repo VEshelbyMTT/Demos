@@ -1,0 +1,30 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"value": "trainingadf104"
+		},
+		"ls_Synapse_taxi_Sql_pool_connectionString": {
+			"value": ""
+		},
+		"ls_transport_transformation_adl2_accountKey": {
+			"value": ""
+		},
+		"ls_NYC_Cab_Repository_properties_typeProperties_url": {
+			"value": "https://s3.amazonaws.com/nyc-tlc/"
+		},
+		"ls_NYC_Cab_Repository_2_properties_typeProperties_url": {
+			"value": "https://nyc-tlc.s3.amazonaws.com/"
+		},
+		"ls_transport_transformation_adl2_properties_typeProperties_url": {
+			"value": "https://traininglake104.dfs.core.windows.net/"
+		},
+		"containerUri": {
+			"value": ""
+		},
+		"containerSasToken": {
+			"value": ""
+		}
+	}
+}
