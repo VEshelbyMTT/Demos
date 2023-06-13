@@ -15,8 +15,31 @@
 				},
 				"userProperties": [],
 				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
 					"enableStaging": false
-				}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_ADL2_NYCRideAnalysis_csv",
+						"type": "DatasetReference",
+						"parameters": {
+							"StorageAccount": "traininglake104",
+							"ContainerName": "bronze",
+							"FolderName": "ingestion/lookup/",
+							"FileName": "taxi_zone_lookup.csv"
+						}
+					}
+				]
 			},
 			{
 				"name": "Data flow1",
