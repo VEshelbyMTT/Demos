@@ -1,0 +1,55 @@
+{
+	"name": "ds_ADL2_NYCRideAnalysis_csv",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_transport_transformation_adl2",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"StorageAccount": {
+				"type": "string",
+				"defaultValue": "traininglake104"
+			},
+			"ContainerName": {
+				"type": "string",
+				"defaultValue": "bronze"
+			},
+			"FolderName": {
+				"type": "string",
+				"defaultValue": "ingestion/lookup/"
+			},
+			"FileName": {
+				"type": "string",
+				"defaultValue": "taxi_zone_lookup.csv"
+			}
+		},
+		"folder": {
+			"name": "NYC Data Information"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@dataset().FileName",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@dataset().FolderName",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "@dataset().ContainerName",
+					"type": "Expression"
+				}
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

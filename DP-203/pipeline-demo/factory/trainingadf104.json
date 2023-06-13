@@ -1,0 +1,9 @@
+{
+	"name": "trainingadf104",
+	"location": "westeurope",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "4be28a5d-5535-45ea-b28b-021cedf9975a",
+		"tenantId": "9d155888-3191-4c87-af15-230decffdf17"
+	}
+}

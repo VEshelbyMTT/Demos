@@ -1,0 +1,39 @@
+{
+	"name": "ds_NYC_Cab_Repository2",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_NYC_Cab_Repository_2",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"FileAddress": {
+				"type": "string",
+				"defaultValue": "https://s3.amazonaws.com/nyc-tlc/trip+data/"
+			},
+			"FileName": {
+				"type": "string",
+				"defaultValue": "yellow_tripdata_2019-01.csv"
+			}
+		},
+		"folder": {
+			"name": "NYC Data Information"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "HttpServerLocation",
+				"relativeUrl": {
+					"value": "@concat(dataset().FileAddress,dataset().FileName)",
+					"type": "Expression"
+				}
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

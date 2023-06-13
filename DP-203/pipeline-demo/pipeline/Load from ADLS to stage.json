@@ -1,0 +1,425 @@
+{
+	"name": "Load from ADLS to stage",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get files to load into Synapse - Yellow",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Set storage account value",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderQuery": "SELECT * FROM [operation].[MetadataTableControl] WHERE GroupName = 'NYC Ride Analysis'\nAND GroupLoad = 'ADL2 to Synapse (Stage)' AND FinalTableName = 'NYCCabTrip_Yellow'",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_Synapse_Lookup",
+						"type": "DatasetReference",
+						"parameters": {
+							"ServerName": {
+								"value": "@pipeline().parameters.ServerName",
+								"type": "Expression"
+							},
+							"DatabaseName": {
+								"value": "@pipeline().parameters.DatabaseName",
+								"type": "Expression"
+							},
+							"UserName": {
+								"value": "@pipeline().parameters.UserName",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Load files into Synapse - Yellow",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get files to load into Synapse - Yellow",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get files to load into Synapse - Yellow').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Ingestion from ADL2 to Synapse - Yellow",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlDWSource",
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "SqlDWSink",
+									"preCopyScript": {
+										"value": "@{concat('TRUNCATE TABLE ',item().DestinationControl2,'.',item().DestinationControl3)}",
+										"type": "Expression"
+									},
+									"allowPolyBase": true,
+									"polyBaseSettings": {
+										"rejectValue": 0,
+										"rejectType": "value",
+										"useTypeDefault": true
+									},
+									"disableMetricsCollection": false
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ls_transport_transformation_adl2",
+										"type": "LinkedServiceReference"
+									},
+									"path": "stagearea"
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_Synapse_CopyData",
+									"type": "DatasetReference",
+									"parameters": {
+										"ServerName": {
+											"value": "@pipeline().parameters.ServerName",
+											"type": "Expression"
+										},
+										"DatabaseName": {
+											"value": "@item().SourceControl1",
+											"type": "Expression"
+										},
+										"UserName": {
+											"value": "@pipeline().parameters.UserName",
+											"type": "Expression"
+										},
+										"SchemaName": {
+											"value": "@item().SourceControl2",
+											"type": "Expression"
+										},
+										"TableName": {
+											"value": "@item().SourceControl3",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_Synapse_CopyData",
+									"type": "DatasetReference",
+									"parameters": {
+										"ServerName": {
+											"value": "@pipeline().parameters.ServerName",
+											"type": "Expression"
+										},
+										"DatabaseName": {
+											"value": "@item().DestinationControl1",
+											"type": "Expression"
+										},
+										"UserName": {
+											"value": "@pipeline().parameters.UserName",
+											"type": "Expression"
+										},
+										"SchemaName": {
+											"value": "@item().DestinationControl2",
+											"type": "Expression"
+										},
+										"TableName": {
+											"value": "@item().DestinationControl3",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "Get files to load into Synapse - Green",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "Load files into Synapse - Yellow",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderQuery": "SELECT * FROM [operation].[MetadataTableControl] WHERE GroupName = 'NYC Ride Analysis'\nAND GroupLoad = 'ADL2 to Synapse (Stage)' AND FinalTableName = 'NYCCabTrip_Green'",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_Synapse_Lookup",
+						"type": "DatasetReference",
+						"parameters": {
+							"ServerName": {
+								"value": "@pipeline().parameters.ServerName",
+								"type": "Expression"
+							},
+							"DatabaseName": {
+								"value": "@pipeline().parameters.DatabaseName",
+								"type": "Expression"
+							},
+							"UserName": {
+								"value": "@pipeline().parameters.UserName",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "Load files into Synapse - Green",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Get files to load into Synapse - Green",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Get files to load into Synapse - Green').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Ingestion from ADL2 to Synapse - Green",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlDWSource",
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "SqlDWSink",
+									"preCopyScript": {
+										"value": "@{concat('TRUNCATE TABLE ',item().DestinationControl2,'.',item().DestinationControl3)}",
+										"type": "Expression"
+									},
+									"allowPolyBase": true,
+									"polyBaseSettings": {
+										"rejectValue": 0,
+										"rejectType": "value",
+										"useTypeDefault": true
+									},
+									"disableMetricsCollection": false
+								},
+								"enableStaging": true,
+								"stagingSettings": {
+									"linkedServiceName": {
+										"referenceName": "ls_transport_transformation_adl2",
+										"type": "LinkedServiceReference"
+									},
+									"path": "stagearea"
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "ds_Synapse_CopyData",
+									"type": "DatasetReference",
+									"parameters": {
+										"ServerName": {
+											"value": "@pipeline().parameters.ServerName",
+											"type": "Expression"
+										},
+										"DatabaseName": {
+											"value": "@item().SourceControl1",
+											"type": "Expression"
+										},
+										"UserName": {
+											"value": "@pipeline().parameters.UserName",
+											"type": "Expression"
+										},
+										"SchemaName": {
+											"value": "@item().SourceControl2",
+											"type": "Expression"
+										},
+										"TableName": {
+											"value": "@item().SourceControl3",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "ds_Synapse_CopyData",
+									"type": "DatasetReference",
+									"parameters": {
+										"ServerName": {
+											"value": "@pipeline().parameters.ServerName",
+											"type": "Expression"
+										},
+										"DatabaseName": {
+											"value": "@item().DestinationControl1",
+											"type": "Expression"
+										},
+										"UserName": {
+											"value": "@pipeline().parameters.UserName",
+											"type": "Expression"
+										},
+										"SchemaName": {
+											"value": "@item().DestinationControl2",
+											"type": "Expression"
+										},
+										"TableName": {
+											"value": "@item().DestinationControl3",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "Get stage storage account",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderQuery": "SELECT DISTINCT\n    DestinationControl1\nFROM\n    [operation].[MetadataTableControl]\nWHERE\n    GroupName = 'NYC Ride Analysis'\n    AND GroupLoad = 'HTTP to ADL2 - 2'",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_Synapse_Lookup",
+						"type": "DatasetReference",
+						"parameters": {
+							"ServerName": {
+								"value": "@pipeline().parameters.ServerName",
+								"type": "Expression"
+							},
+							"DatabaseName": {
+								"value": "@pipeline().parameters.DatabaseName",
+								"type": "Expression"
+							},
+							"UserName": {
+								"value": "@pipeline().parameters.UserName",
+								"type": "Expression"
+							}
+						}
+					},
+					"firstRowOnly": true
+				}
+			},
+			{
+				"name": "Set storage account value",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Get stage storage account",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "StorageAccountName",
+					"value": {
+						"value": "@{activity('Get stage storage account').output.firstRow.DestinationControl1}",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"ServerName": {
+				"type": "string",
+				"defaultValue": "ServerName"
+			},
+			"DatabaseName": {
+				"type": "string",
+				"defaultValue": "DatabaseName"
+			},
+			"UserName": {
+				"type": "string",
+				"defaultValue": "UserName"
+			}
+		},
+		"variables": {
+			"StorageAccountName": {
+				"type": "String",
+				"defaultValue": "traininglake104"
+			}
+		},
+		"folder": {
+			"name": "NYC Data Transformation"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-03-28T13:04:05Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

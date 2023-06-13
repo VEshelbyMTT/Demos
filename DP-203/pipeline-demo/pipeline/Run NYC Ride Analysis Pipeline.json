@@ -1,0 +1,206 @@
+{
+	"name": "Run NYC Ride Analysis Pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "From Web to ADL2",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Get environment parameters",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Load from web to ADL2",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"ServerName": {
+							"value": "@activity('Get environment parameters').output.firstRow.ServerName",
+							"type": "Expression"
+						},
+						"DatabaseName": {
+							"value": "@activity('Get environment parameters').output.firstRow.DatabaseName",
+							"type": "Expression"
+						},
+						"UserName": {
+							"value": "@activity('Get environment parameters').output.firstRow.UserName",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "From ADL2 to Synapse stage",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "From Web to ADL2",
+						"dependencyConditions": [
+							"Succeeded",
+							"Failed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Load from ADLS to stage",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"ServerName": {
+							"value": "@activity('Get environment parameters').output.firstRow.ServerName",
+							"type": "Expression"
+						},
+						"DatabaseName": {
+							"value": "@activity('Get environment parameters').output.firstRow.DatabaseName",
+							"type": "Expression"
+						},
+						"UserName": {
+							"value": "@activity('Get environment parameters').output.firstRow.UserName",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Load taxi zone",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "From ADL2 to Synapse stage",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Load taxi zone",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"ServerName": {
+							"value": "@activity('Get environment parameters').output.firstRow.ServerName",
+							"type": "Expression"
+						},
+						"DatabaseName": {
+							"value": "@activity('Get environment parameters').output.firstRow.DatabaseName",
+							"type": "Expression"
+						},
+						"UserName": {
+							"value": "@activity('Get environment parameters').output.firstRow.UserName",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "From stage to DW",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Load taxi zone",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "Load from stage to dw",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"ServerName": {
+							"value": "@activity('Get environment parameters').output.firstRow.ServerName",
+							"type": "Expression"
+						},
+						"DatabaseName": {
+							"value": "@activity('Get environment parameters').output.firstRow.DatabaseName",
+							"type": "Expression"
+						},
+						"UserName": {
+							"value": "@activity('Get environment parameters').output.firstRow.UserName",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Get environment parameters",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlDWSource",
+						"sqlReaderQuery": {
+							"value": "@{concat('SELECT ''',\npipeline().parameters.ServerName,''' AS ServerName,','''','',\npipeline().parameters.DatabaseName,''' AS DatabaseName,','''','',\npipeline().parameters.UserName,''' AS UserName'\n)}",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_Synapse_Lookup",
+						"type": "DatasetReference",
+						"parameters": {
+							"ServerName": {
+								"value": "@pipeline().parameters.ServerName",
+								"type": "Expression"
+							},
+							"DatabaseName": {
+								"value": "@pipeline().parameters.DatabaseName",
+								"type": "Expression"
+							},
+							"UserName": {
+								"value": "@pipeline().parameters.UserName",
+								"type": "Expression"
+							}
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"ServerName": {
+				"type": "string",
+				"defaultValue": "ServerName"
+			},
+			"DatabaseName": {
+				"type": "string",
+				"defaultValue": "DatabaseName"
+			},
+			"UserName": {
+				"type": "string",
+				"defaultValue": "UserName"
+			}
+		},
+		"folder": {
+			"name": "NYC Data Transformation"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-03-28T13:04:06Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}
