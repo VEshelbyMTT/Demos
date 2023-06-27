@@ -56,7 +56,7 @@
 
 #Step 2: Connect to my event hub namespace - EH entry
 prefix = "" #ENTER YOUR PREFIX
-Endpoint = f'sb://tollappmltar{prefix}-eventhub.servicebus.windows.net/'# put your endpoint
+Endpoint = f'sb://tollapp{prefix}-eventhub.servicebus.windows.net/'# put your endpoint
 EntityPath = 'entrystream'
 SharedAccessKeyName = 'RootManageSharedAccessKey'
 SharedAccessKey = "" # ENTER YOUR KEY FROM EVENT HUB
@@ -78,7 +78,7 @@ dbutils.fs.rm(checkpointPath,True)
 
 FILE_DIR = "data"
 FILE_MOUNT = f"/mnt/{FILE_DIR}" #File directory 
-STORAGE_ACCOUNT = f"tollappmltar{prefix}" #Storage account
+STORAGE_ACCOUNT = f"tollapp{prefix}" #Storage account
 SOURCE = f"wasbs://{FILE_DIR}@{STORAGE_ACCOUNT}.blob.core.windows.net" 
 CONFIG = f"fs.azure.account.key.{STORAGE_ACCOUNT}.blob.core.windows.net"
 secret_scope_name = ''#put your secret scope name
