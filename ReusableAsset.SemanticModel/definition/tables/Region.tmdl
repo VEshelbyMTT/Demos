@@ -1,0 +1,87 @@
+table Region
+	isHidden
+	lineageTag: 5f6774b0-7a2d-4c98-a680-f126af8c7e5c
+
+	column SalesTerritoryKey
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: f4528c79-1b41-49c4-85eb-37659b17b9ff
+		summarizeBy: none
+		sourceColumn: SalesTerritoryKey
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column Region
+		dataType: string
+		isHidden
+		lineageTag: bc3c173c-de85-4fda-a7b2-558608e12c73
+		summarizeBy: none
+		sourceColumn: Region
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column Country
+		dataType: string
+		isHidden
+		lineageTag: 2d895830-1ae2-4591-9e37-93ef1acd8059
+		dataCategory: Country
+		summarizeBy: none
+		sourceColumn: Country
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column Group
+		dataType: string
+		isHidden
+		lineageTag: baec4f43-4cd6-42b1-8acf-ce51387016ae
+		summarizeBy: none
+		sourceColumn: Group
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	hierarchy Regions
+		isHidden
+		lineageTag: 2952f8f8-8b0e-4ee8-8d4a-f684f8791e60
+
+		level Group
+			lineageTag: a50cefde-441a-480b-92f3-b97366e2001e
+			column: Group
+
+		level Country
+			lineageTag: 8e84fcee-331d-4e85-9de8-a69ffbba4ed4
+			column: Country
+
+		level Region
+			lineageTag: f48dfa0d-4137-4515-9035-fc5a61d3eacb
+			column: Region
+
+		changedProperty = IsHidden
+
+	partition Region = m
+		mode: import
+		source =
+				let
+				    Source = Sql.Databases(SQLInstance),
+				    AdventureWorksDW2020 = Source{[Name=Database]}[Data],
+				    dbo_DimSalesTerritory = AdventureWorksDW2020{[Schema="dbo",Item="DimSalesTerritory"]}[Data],
+				    #"Filtered Rows" = Table.SelectRows(dbo_DimSalesTerritory, each ([SalesTerritoryAlternateKey] <> 0)),
+				    #"Removed Other Columns" = Table.SelectColumns(#"Filtered Rows",{"SalesTerritoryKey", "SalesTerritoryRegion", "SalesTerritoryCountry", "SalesTerritoryGroup"}),
+				    #"Renamed Columns" = Table.RenameColumns(#"Removed Other Columns",{{"SalesTerritoryRegion", "Region"}, {"SalesTerritoryCountry", "Country"}, {"SalesTerritoryGroup", "Group"}})
+				in
+				    #"Renamed Columns"
+
+	changedProperty = IsHidden
+
+	annotation PBI_ResultType = Table
+
+	annotation PBI_NavigationStepName = Navigation
+

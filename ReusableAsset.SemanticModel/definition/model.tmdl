@@ -1,0 +1,29 @@
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	discourageImplicitMeasures
+	sourceQueryCulture: en-US
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation PBI_QueryOrder = ["Salesperson (Performance)","SalespersonRegion","Product","Reseller","Region","Sales","Targets","ColorFormats","SQLInstance","Database","RangeStart","RangeEnd"]
+
+annotation __PBI_TimeIntelligenceEnabled = 0
+
+annotation PBIDesktopVersion = 2.142.701.0 (25.04)+1439da3fddd5a5ab2ba3949d4ea8a4fda7fc0bcb
+
+annotation PBI_ProTooling = ["CalcGroup","DevMode"]
+
+ref table 'Salesperson (Performance)'
+ref table SalespersonRegion
+ref table Product
+ref table Reseller
+ref table Region
+ref table Sales
+ref table Targets
+ref table Salesperson
+ref table Date
+
+ref cultureInfo en-US
+

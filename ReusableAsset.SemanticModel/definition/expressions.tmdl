@@ -1,0 +1,38 @@
+expression ColorFormats =
+		let
+		    Source = Csv.Document(Web.Contents("https://raw.githubusercontent.com/MicrosoftLearning/PL-300-Microsoft-Power-BI-Data-Analyst/Main/Allfiles/Resources/ColorFormats.csv"),[Delimiter=",", Columns=3, Encoding=65001, QuoteStyle=QuoteStyle.None]),
+		    #"Changed Type" = Table.TransformColumnTypes(Source,{{"Column1", type text}, {"Column2", type text}, {"Column3", type text}}),
+		    #"Promoted Headers" = Table.PromoteHeaders(#"Changed Type", [PromoteAllScalars=true]),
+		    #"Changed Type1" = Table.TransformColumnTypes(#"Promoted Headers",{{"Color", type text}, {"Background Color Format", type text}, {"Font Color Format", type text}})
+		in
+		    #"Changed Type1"
+	lineageTag: 8b29b44d-24ec-46d0-b9f2-0c0052d998c6
+
+	annotation PBI_ResultType = Table
+
+expression SQLInstance = "localhost" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: 6f15ac10-a0d4-4670-8ee9-1fdf3d593f61
+
+	annotation PBI_ResultType = Text
+
+	annotation PBI_NavigationStepName = Navigation
+
+expression Database = "AdventureWorksDW2020" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: 787b676a-fbc0-4a2a-8c85-4f0307bae0e4
+
+	annotation PBI_ResultType = Text
+
+expression RangeStart = #datetime(2017, 7, 1, 0, 0, 0) meta [IsParameterQuery=true, Type="DateTime", IsParameterQueryRequired=true]
+	lineageTag: e4e6d9e1-fc25-4355-b6cd-806381836b8d
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = DateTime
+
+expression RangeEnd = #datetime(2018, 6, 30, 0, 0, 0) meta [IsParameterQuery=true, Type="DateTime", IsParameterQueryRequired=true]
+	lineageTag: 17d6f477-bb8c-4563-b0c2-ea771ea4111c
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = DateTime
+

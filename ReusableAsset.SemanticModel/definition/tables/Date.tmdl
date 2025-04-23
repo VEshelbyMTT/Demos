@@ -1,0 +1,86 @@
+table Date
+	lineageTag: b11a86cf-d92e-4f86-bce2-8906a4823d37
+	dataCategory: Time
+
+	column Date
+		isKey
+		formatString: General Date
+		lineageTag: f5fc300c-7163-45ab-8d2a-2fced06c3523
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Date]
+
+		annotation SummarizationSetBy = Automatic
+
+	column Year =
+			
+			"FY" & YEAR('Date'[Date])
+		lineageTag: 5a2c0a6a-d861-42ec-8ee1-310f36848145
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	column Quarter = ```
+			
+			'Date'[Year] & " Q"
+			    & IF(
+			        MONTH('Date'[Date]) <= 3,
+			        1,
+			        IF(
+			            MONTH('Date'[Date]) <= 6,
+			            2,
+			            IF(
+			                MONTH('Date'[Date]) <= 9,
+			                3,
+			                4
+			            )
+			        )
+			    )
+			
+			```
+		lineageTag: e9a5fee7-a117-478a-9a66-4e3696372c9d
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	column Month =
+			
+			FORMAT('Date'[Date], "yyyy MMM")
+		lineageTag: c79e80fe-a254-4b38-9e01-c1c810dfaf43
+		summarizeBy: none
+		sortByColumn: MonthKey
+
+		annotation SummarizationSetBy = Automatic
+
+	column MonthKey =
+			
+			(YEAR('Date'[Date]) * 100) + MONTH('Date'[Date])
+		formatString: 0
+		lineageTag: f26d8342-6ed4-46bc-b3c5-39efc04ce822
+		summarizeBy: count
+
+		annotation SummarizationSetBy = Automatic
+
+	hierarchy Fiscal
+		lineageTag: a3a45406-031d-4167-b6ec-c0a9608e95a8
+
+		level Year
+			lineageTag: 5730c2a5-ef6f-4b85-969f-dbdff05407e7
+			column: Year
+
+		level Quarter
+			lineageTag: c85fd255-63c3-43f2-9986-1d078c8a2f24
+			column: Quarter
+
+		level Month
+			lineageTag: 1393f723-2f74-4cb4-ba30-68ab5545301f
+			column: Month
+
+	partition Date = calculated
+		mode: import
+		source =
+				
+				CALENDARAUTO(6)
+
+	annotation PBI_Id = 0134230ccc964dfc9692eda19262bb05
+

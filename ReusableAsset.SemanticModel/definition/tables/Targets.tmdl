@@ -1,0 +1,96 @@
+table Targets
+	lineageTag: fc05aa02-32da-45a3-a497-78e97999d244
+
+	measure Target =
+			
+			IF(
+				HASONEVALUE('Salesperson (Performance)'[Salesperson]),
+				SUM(Targets[TargetAmount])
+			)
+		formatString: \$#,0;(\$#,0);\$#,0
+		lineageTag: ffc79c2c-8c37-499d-919a-2a3511102514
+
+		annotation PBI_FormatHint = {"currencyCulture":"en-US"}
+
+	measure Variance = ```
+			
+			IF(    
+			    HASONEVALUE('Salesperson (Performance)'[Salesperson]),    
+			    SUM(Sales[Sales]) - [Target]
+			)
+			```
+		formatString: \$#,0;(\$#,0);\$#,0
+		lineageTag: b4b78e5d-a649-4965-9c84-fae75fa12d98
+
+		annotation PBI_FormatHint = {"currencyCulture":"en-US"}
+
+	measure 'Variance Margin' =
+			
+			DIVIDE([Variance], [Target])
+		formatString: 0.00%;-0.00%;0.00%
+		lineageTag: 35ad240b-b1a0-4fce-8c33-f0f9bb99044a
+
+	column EmployeeID
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 7552db63-13e7-4c1c-8e70-ee51dcd1066d
+		summarizeBy: none
+		sourceColumn: EmployeeID
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+	column TargetAmount
+		dataType: decimal
+		isHidden
+		formatString: \$#,0.###############;(\$#,0.###############);\$#,0.###############
+		lineageTag: c8642aff-9cd7-43b3-ad05-ba32d7661db3
+		summarizeBy: sum
+		sourceColumn: TargetAmount
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"currencyCulture":"en-US"}
+
+	column TargetMonth
+		dataType: dateTime
+		isHidden
+		formatString: Long Date
+		lineageTag: 542d3ac9-7ec1-4b7a-8768-ea712b42a580
+		summarizeBy: none
+		sourceColumn: TargetMonth
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	partition Targets = m
+		mode: import
+		source =
+				let
+				    Source = Csv.Document(Web.Contents("https://raw.githubusercontent.com/MicrosoftLearning/PL-300-Microsoft-Power-BI-Data-Analyst/Main/Allfiles/Resources/ResellerSalesTargets.csv"),[Delimiter=",", Columns=14, Encoding=1200, QuoteStyle=QuoteStyle.None]),
+				    #"Promoted Headers" = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers",{{"Year", Int64.Type}, {"EmployeeID", Int64.Type}, {"M01", type text}, {"M02", type text}, {"M03", type text}, {"M04", type text}, {"M05", type text}, {"M06", type text}, {"M07", type text}, {"M08", type text}, {"M09", type text}, {"M10", type text}, {"M11", type text}, {"M12", type text}}),
+				    #"Unpivoted Other Columns" = Table.UnpivotOtherColumns(#"Changed Type", {"Year", "EmployeeID"}, "Attribute", "Value"),
+				    #"Filtered Rows" = Table.SelectRows(#"Unpivoted Other Columns", each ([Value] <> "-")),
+				    #"Renamed Columns" = Table.RenameColumns(#"Filtered Rows",{{"Attribute", "MonthNumber"}, {"Value", "Target"}}),
+				    #"Replaced Value" = Table.ReplaceValue(#"Renamed Columns","M","",Replacer.ReplaceText,{"MonthNumber"}),
+				    #"Changed Type1" = Table.TransformColumnTypes(#"Replaced Value",{{"MonthNumber", Int64.Type}}),
+				    #"Inserted Merged Column" = Table.AddColumn(#"Changed Type1", "TargetMonth", each Text.Combine({Text.From([MonthNumber], "en-US"), "/1/", Text.From([Year], "en-US")}), type text),
+				    #"Removed Columns" = Table.RemoveColumns(#"Inserted Merged Column",{"Year", "MonthNumber"}),
+				    #"Changed Type2" = Table.TransformColumnTypes(#"Removed Columns",{{"Target", Currency.Type}, {"TargetMonth", type date}}),
+				    #"Multiplied Column" = Table.TransformColumns(#"Changed Type2", {{"Target", each _ * 1000, Currency.Type}}),
+				    #"Renamed Columns1" = Table.RenameColumns(#"Multiplied Column",{{"Target", "TargetAmount"}})
+				in
+				    #"Renamed Columns1"
+
+	annotation PBI_ResultType = Table
+
+	annotation PBI_NavigationStepName = Navigation
+

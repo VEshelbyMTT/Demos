@@ -1,0 +1,59 @@
+table Salesperson
+	lineageTag: 7d2bb797-a22f-4f92-93c2-336cc56df79c
+
+	/// Salesperson related to Sales
+	column EmployeeKey
+		isHidden
+		formatString: 0
+		lineageTag: 591f68d7-bfad-4d7f-8842-0cb8498d0495
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: Salesperson (Performance)[EmployeeKey]
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Salesperson related to Sales
+	column EmployeeID
+		isHidden
+		formatString: 0
+		lineageTag: 4bf7f41f-a528-41f8-9199-f11b756e2c19
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: Salesperson (Performance)[EmployeeID]
+
+		annotation SummarizationSetBy = Automatic
+
+	column Title
+		lineageTag: 1466b05f-5751-4cac-b629-a33b5548417d
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: Salesperson (Performance)[Title]
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Salesperson related to Sales
+	column UPN
+		isHidden
+		lineageTag: 89a9123a-ff31-473a-8f27-f8e396f7ed76
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: Salesperson (Performance)[UPN]
+
+		annotation SummarizationSetBy = Automatic
+
+	column Salesperson
+		lineageTag: 8459bc64-a465-4094-ac97-0202fdb87d70
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: Salesperson (Performance)[Salesperson]
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Salesperson = calculated
+		mode: import
+		source =
+				
+				'Salesperson (Performance)'
+
+	annotation PBI_Id = 7a6709a77b9643b98d040b09ca89debc
+
