@@ -17,3 +17,11 @@ def save_or_update_deltatable(df, folder_name, catalog="azure_cloud", schema="de
     table_name = f"{catalog}.{schema}.{folder_name}_cleaned"
     df.write.format("delta").mode("overwrite").saveAsTable(table_name)
     return table_name
+
+    
+def save_cleaned_data(df, name, chosen_file_path):
+    """
+    Save cleaned DataFrame as Delta and update Delta table.
+    """
+    save_as_delta(df, name, chosen_file_path)
+    save_or_update_deltatable(df, name)
