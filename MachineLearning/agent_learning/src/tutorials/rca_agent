@@ -1,0 +1,212 @@
+#taken from https://github.com/anderl80/automotive_rca_agent
+
+
+# rca_autogen_demo.py  –  Multi-Agent-Root-Cause-Analysis (ABS-Fehler-Datensatz)
+
+import asyncio, os, json, duckdb, datetime
+from dotenv import load_dotenv
+from typing import List, Dict, Any
+from rich.console import Console
+from rich.terminal_theme import MONOKAI
+from rich.text import Text
+from rich.markdown import Markdown
+from autogen_agentchat.agents import AssistantAgent, UserProxyAgent
+from autogen_agentchat.teams import SelectorGroupChat
+from autogen_agentchat.conditions import TextMentionTermination
+from autogen_agentchat.base import TaskResult
+from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
+
+
+load_dotenv()
+
+azure_oai_endpoint     = os.getenv("AZURE_OPENAI_API_ENDPOINT")
+azure_oai_key          = os.getenv("AZURE_OPENAI_API_KEY")
+azure_model_deployment = os.getenv("AZURE_MODEL_DEPLOYMENT")
+azure_api_version      = os.getenv("AZURE_OPENAI_API_VERSION")
+
+os.environ.setdefault("CAN_PARQUET"   , "demo_abs_fault/abs_fault.csv")
+os.environ.setdefault("SIGNAL_CATALOG", "demo_abs_fault/signal_catalog.csv")
+
+
+# ------------------------------------------------------------------ #
+# 0)  DuckDB-Connection + Views  (ohne prepared parameters)
+# ------------------------------------------------------------------ #
+import duckdb, os
+CON = duckdb.connect()
+
+def _q(path: str) -> str:
+    """ Simple masking of commas.
+    """
+    return path.replace("'", "''")
+
+def _init_duck_views() -> None:
+    parquet = os.getenv("CAN_PARQUET",   "demo_abs_fault/abs_fault.csv")
+    catalog = os.getenv("SIGNAL_CATALOG","demo_abs_fault/signal_catalog.csv")
+
+    CON.execute(f"""
+        CREATE OR REPLACE VIEW can AS
+        SELECT * FROM read_csv_auto('{_q(parquet)}');
+    """)
+    CON.execute(f"""
+        CREATE OR REPLACE VIEW signal_catalog AS
+        SELECT * FROM read_csv_auto('{_q(catalog)}');
+    """)
+
+_init_duck_views()
+
+async def list_signals(limit: int = 10) -> str:
+    df = CON.execute(
+        "SELECT signal_id, name, unit "
+        "FROM signal_catalog ORDER BY signal_id LIMIT ?", [limit]
+    ).df()
+    return df.to_json(orient="records")
+
+
+async def signal_stats(signal_id: int) -> str:
+    df = CON.execute(
+        "SELECT min(value) AS min, max(value) AS max, variance(value) AS var, "
+        "min(ts_ns) AS t0, max(ts_ns) AS t1 "
+        "FROM can WHERE signal_id = ?", [signal_id]
+    ).df()
+    return df.to_json(orient="records")
+
+
+async def run_query(signal_id: int, start_ns: int = 0, end_ns: int | None = None) -> str:
+    end_clause = "AND ts_ns <= ?" if end_ns else ""
+    params     = [signal_id, start_ns] + ([end_ns] if end_ns else [])
+    df = CON.execute(
+        f"SELECT avg(value) AS mu, stddev_samp(value) AS sigma, "
+        f"count(*) AS n FROM can "
+        f"WHERE signal_id = ? AND ts_ns >= ? {end_clause}", params
+    ).df()
+    return df.to_json(orient="records")
+
+
+# ============================================================================ #
+# 1)  Azure-OpenAI-Client-Factory
+# ============================================================================ #
+def az_client() -> AzureOpenAIChatCompletionClient:
+    return AzureOpenAIChatCompletionClient(
+        model           = azure_model_deployment,
+        api_version     = azure_api_version,
+        azure_endpoint  = azure_oai_endpoint,
+        api_key         = azure_oai_key,
+        model_capabilities={
+            "vision": False,
+            "function_calling": True,
+            "json_output": True,
+        },
+    )
+
+# ============================================================================ #
+# 2)  Agenten-Definitionen
+# ============================================================================ #
+user_proxy = UserProxyAgent("User")
+
+schema_agent = AssistantAgent(
+    name="schema_agent",
+    description="Signal-Katalog & Statistik",
+    model_client=az_client(),
+    tools=[list_signals, signal_stats],
+    system_message=(
+        "Wenn du 'Inventur erforderlich' siehst, rufe list_signals(15) auf, "
+        "erstelle eine <150-Token-Zusammenfassung (wie viele Signale, "
+        "Sinnvollste IDs) und sende sie.  Später antworte nur, "
+        "wenn andere Agenten nach Schema-Infos fragen."
+    ),
+)
+
+hypothesis_agent = AssistantAgent(
+    name        = "hypothesis_agent",
+    description = "Erzeugt testbare Hypothesen als JSON",
+    model_client= az_client(),
+    tools       = [list_signals, signal_stats],
+    system_message=(
+        "Gib max. 3 Hypothesen als JSON-Liste "
+        "[{id:int, description:str, signal_id:int, sql:str}] zurück. "
+        "Verwende nur Signal-IDs, die laut schema_agent existieren."
+    ),
+)
+
+analysis_agent = AssistantAgent(
+    name        = "analysis_agent",
+    description = "Führt Datenabfragen aus und bestätigt/verwift Hypothesen",
+    model_client= az_client(),
+    tools       = [run_query],
+    system_message = (
+    "Du bekommst Messdaten.  Verwende *immer* "
+    "`signal_stats(id)` falls du dir über Werte­bereich oder Existenz unsicher "
+    "bist.  Liefere pro Runde max. 2 Hypothesen im JSON-Format."
+    ),
+)
+
+orchestrator_agent = AssistantAgent(
+    name="orchestrator_agent",
+    description="Leitet Root-Cause-Analyse",
+    model_client=az_client(),
+    system_message=(
+        "Du führst ein Multi-Agent-Team, das auf Echtzeit-Messdaten zugreifen "
+        "kann.  Die Daten liegen bereits als DuckDB-Views `can` (Zeitreihen) "
+        "und `signal_catalog` vor und die Tools `list_signals`, `signal_stats` "
+        "und `run_query` sind verfügbar.\n\n"
+        "1. Lass zuerst den schema_agent eine kurze Inventur der Signale posten.\n"
+        "2. Schicke den hypothesis_agent los, testbare Hypothesen (JSON) zu "
+        "erzeugen.\n"
+        "3. Gib jede Hypothese an den analysis_agent, der die Hypothese mit den"
+        "Daten bestätigt oder verwirft, prüfe das Ergebnis und "
+        "frage ggf. nach weiteren Daten und / oder nach weiteren Hypothesen.\n"
+        "Beende den Prozess mit dem Keyword **TERMINATE**, sobald eine plausible"
+        "Ursache gefunden wurde die durch die Daten bestätigt ist und an den User"
+        "zurückgegeben wurde."
+    ),
+)
+
+
+# ============================================================================ #
+# 3) Team & Abbruchbedingung
+# ============================================================================ #
+termination = TextMentionTermination("TERMINATE", sources=["orchestrator_agent"])
+
+team = SelectorGroupChat(
+    [orchestrator_agent, hypothesis_agent,
+     analysis_agent, schema_agent, user_proxy],
+    model_client=az_client(),
+    termination_condition=termination,
+)
+
+# ============================================================================ #
+# 4) Main-Routine
+# ============================================================================ #
+from contextlib import suppress
+async def main() -> None:
+    task_prompt = (
+        "Fahrzeug ruckelt beim Bremsen – bitte analysiert die Messdaten "
+        "und findet die Ursache.  (Datum: " + str(datetime.date.today()) + ")"
+    )
+    stream = team.run_stream(task=task_prompt)
+
+    console = Console(record=True)
+    try:
+        async for resp in stream:
+            if isinstance(resp, TaskResult):
+                console.print(f"[green]{resp.stop_reason}[/green]")
+                break
+            text = Text()
+            text.append(resp.source, style="bold magenta")
+            text.append(": ")
+            console.print(text)
+            console.print(Markdown(resp.content) if isinstance(resp.content, str) else resp.content)
+    except KeyboardInterrupt:
+        console.print("\n[bold red]Abbruch durch Benutzer[/bold red]")
+        with suppress(Exception):
+            await stream.aclose() 
+        console.save_svg("rca_abs_example.svg", theme=MONOKAI)
+
+    finally:
+        # ein einziges SVG mit kompletter Sitzung sichern
+        fname = f"rca_abs_{datetime.datetime.now():%Y%m%d_%H%M%S}.svg"
+        console.save_svg(fname, theme=MONOKAI)
+        console.print(f"[blue]SVG gespeichert: {fname}[/blue]")
+
+if __name__ == "__main__":
+    asyncio.run(main())
